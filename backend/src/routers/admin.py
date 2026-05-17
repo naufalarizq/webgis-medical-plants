@@ -8,7 +8,7 @@ import shutil
 import uuid
 
 from src.database import get_db
-from src.models import Plant, KategoriTanaman
+from src.models import Plant, PlantCategory
 from src.schemas import PlantResponse
 from src.auth import get_current_username
 
@@ -22,37 +22,37 @@ class BulkDeleteRequest(BaseModel):
 
 @router.post("", response_model=PlantResponse, status_code=status.HTTP_201_CREATED)
 async def create_plant(
-    nama: str = Form(...),
-    nama_latin: str = Form(...),
-    kategori: KategoriTanaman = Form(...),
-    lokasi: str = Form(...),
-    skala: int = Form(...),
-    jumlah: int = Form(...),
+    name: str = Form(...),
+    scientific_name: str = Form(...),
+    category: PlantCategory = Form(...),
+    location: str = Form(...),
+    scale: int = Form(...),
+    quantity: int = Form(...),
     lat: float = Form(...),
     lng: float = Form(...),
-    foto: Optional[UploadFile] = File(None),
+    photo: Optional[UploadFile] = File(None),
     current_user: str = Depends(get_current_username),
     db: AsyncSession = Depends(get_db)
 ):
-    foto_url = None
-    if foto:
-        file_extension = foto.filename.split(".")[-1]
+    image_url = None
+    if photo:
+        file_extension = photo.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_extension}"
         file_path = os.path.join(STATIC_DIR, file_name)
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(foto.file, buffer)
-        foto_url = f"/{STATIC_DIR}/{file_name}"
+            shutil.copyfileobj(photo.file, buffer)
+        image_url = f"/{STATIC_DIR}/{file_name}"
         
     geom_wkt = f"SRID=4326;POINT({lng} {lat})"
     
     new_plant = Plant(
-        nama=nama,
-        nama_latin=nama_latin,
-        kategori=kategori,
-        lokasi=lokasi,
-        skala=skala,
-        jumlah=jumlah,
-        foto_url=foto_url,
+        name=name,
+        scientific_name=scientific_name,
+        category=category,
+        location=location,
+        scale=scale,
+        quantity=quantity,
+        image_url=image_url,
         geom=geom_wkt
     )
     
@@ -68,15 +68,15 @@ async def create_plant(
 @router.put("/{plant_id}", response_model=PlantResponse)
 async def update_plant(
     plant_id: int,
-    nama: Optional[str] = Form(None),
-    nama_latin: Optional[str] = Form(None),
-    kategori: Optional[KategoriTanaman] = Form(None),
-    lokasi: Optional[str] = Form(None),
-    skala: Optional[int] = Form(None),
-    jumlah: Optional[int] = Form(None),
+    name: Optional[str] = Form(None),
+    scientific_name: Optional[str] = Form(None),
+    category: Optional[PlantCategory] = Form(None),
+    location: Optional[str] = Form(None),
+    scale: Optional[int] = Form(None),
+    quantity: Optional[int] = Form(None),
     lat: Optional[float] = Form(None),
     lng: Optional[float] = Form(None),
-    foto: Optional[UploadFile] = File(None),
+    photo: Optional[UploadFile] = File(None),
     current_user: str = Depends(get_current_username),
     db: AsyncSession = Depends(get_db)
 ):
@@ -85,20 +85,20 @@ async def update_plant(
     if not plant:
         raise HTTPException(status_code=404, detail="Plant not found")
         
-    if foto:
-        file_extension = foto.filename.split(".")[-1]
+    if photo:
+        file_extension = photo.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_extension}"
         file_path = os.path.join(STATIC_DIR, file_name)
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(foto.file, buffer)
-        plant.foto_url = f"/{STATIC_DIR}/{file_name}"
+            shutil.copyfileobj(photo.file, buffer)
+        plant.image_url = f"/{STATIC_DIR}/{file_name}"
         
-    if nama is not None: plant.nama = nama
-    if nama_latin is not None: plant.nama_latin = nama_latin
-    if kategori is not None: plant.kategori = kategori
-    if lokasi is not None: plant.lokasi = lokasi
-    if skala is not None: plant.skala = skala
-    if jumlah is not None: plant.jumlah = jumlah
+    if name is not None: plant.name = name
+    if scientific_name is not None: plant.scientific_name = scientific_name
+    if category is not None: plant.category = category
+    if location is not None: plant.location = location
+    if scale is not None: plant.scale = scale
+    if quantity is not None: plant.quantity = quantity
     
     if lat is not None and lng is not None:
         plant.geom = f"SRID=4326;POINT({lng} {lat})"

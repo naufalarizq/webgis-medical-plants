@@ -37,29 +37,30 @@ def upgrade() -> None:
     op.create_index(op.f('ix_admin_users_username'), 'admin_users', ['username'], unique=True)
     op.create_table('plants',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('nama', sa.String(length=255), nullable=False),
-    sa.Column('nama_latin', sa.String(length=255), nullable=False),
-    sa.Column('kategori', sa.Enum('tanaman_hias', 'tanaman_pangan', 'tanaman_herbal', 'tanaman_aromatik', 'tanaman_pelindung', name='kategoritanaman'), nullable=False),
-    sa.Column('lokasi', sa.String(length=255), nullable=False),
-    sa.Column('skala', sa.Integer(), nullable=False),
-    sa.Column('jumlah', sa.Integer(), nullable=False),
-    sa.Column('foto_url', sa.String(length=1024), nullable=True),
+    sa.Column('name', sa.String(length=255), nullable=False),
+    sa.Column('scientific_name', sa.String(length=255), nullable=False),
+    sa.Column('category', sa.Enum('ornamental', 'food', 'herbal', 'aromatic', 'shade', name='plantcategory'), nullable=False),
+    sa.Column('location', sa.String(length=255), nullable=False),
+    sa.Column('scale', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Integer(), nullable=False),
+    sa.Column('image_url', sa.String(length=1024), nullable=True),
     sa.Column('geom', geoalchemy2.types.Geometry(geometry_type='POINT', srid=4326, dimension=2, from_text='ST_GeomFromEWKT', name='geometry'), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_plants_id'), 'plants', ['id'], unique=False)
-    op.create_index(op.f('ix_plants_nama'), 'plants', ['nama'], unique=False)
-    op.create_index(op.f('ix_plants_nama_latin'), 'plants', ['nama_latin'], unique=False)
+    op.create_index(op.f('ix_plants_name'), 'plants', ['name'], unique=False)
+    op.create_index(op.f('ix_plants_scientific_name'), 'plants', ['scientific_name'], unique=False)
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(op.f('ix_plants_nama_latin'), table_name='plants')
-    op.drop_index(op.f('ix_plants_nama'), table_name='plants')
+    op.drop_index(op.f('ix_plants_scientific_name'), table_name='plants')
+    op.drop_index(op.f('ix_plants_name'), table_name='plants')
     op.drop_index(op.f('ix_plants_id'), table_name='plants')
     op.drop_table('plants')
+    op.execute('DROP TYPE plantcategory;')
     op.drop_index(op.f('ix_admin_users_username'), table_name='admin_users')
     op.drop_index(op.f('ix_admin_users_id'), table_name='admin_users')
     op.drop_index(op.f('ix_admin_users_email'), table_name='admin_users')

@@ -5,15 +5,15 @@ from typing import List, Optional
 import json
 
 from src.database import get_db
-from src.models import Plant, KategoriTanaman
+from src.models import Plant, PlantCategory
 from src.schemas import PlantResponse
 
 router = APIRouter(prefix="/api", tags=["public"])
 
 @router.get("/plants", response_model=List[PlantResponse])
 async def list_plants(
-    kategori: Optional[KategoriTanaman] = None,
-    lokasi: Optional[str] = None,
+    category: Optional[PlantCategory] = None,
+    location: Optional[str] = None,
     search: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -24,12 +24,12 @@ async def list_plants(
         func.ST_Y(Plant.geom).label('lat'),
         func.ST_X(Plant.geom).label('lng')
     )
-    if kategori:
-        stmt = stmt.where(Plant.kategori == kategori)
-    if lokasi:
-        stmt = stmt.where(Plant.lokasi == lokasi)
+    if category:
+        stmt = stmt.where(Plant.category == category)
+    if location:
+        stmt = stmt.where(Plant.location == location)
     if search:
-        stmt = stmt.where(Plant.nama.ilike(f"%{search}%") | Plant.nama_latin.ilike(f"%{search}%"))
+        stmt = stmt.where(Plant.name.ilike(f"%{search}%") | Plant.scientific_name.ilike(f"%{search}%"))
         
     stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
@@ -44,8 +44,8 @@ async def list_plants(
 
 @router.get("/plants/geojson")
 async def get_plants_geojson(
-    kategori: Optional[KategoriTanaman] = None,
-    lokasi: Optional[str] = None,
+    category: Optional[PlantCategory] = None,
+    location: Optional[str] = None,
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ):
@@ -53,12 +53,12 @@ async def get_plants_geojson(
         Plant,
         func.ST_AsGeoJSON(Plant.geom).label('geojson_geom')
     )
-    if kategori:
-        stmt = stmt.where(Plant.kategori == kategori)
-    if lokasi:
-        stmt = stmt.where(Plant.lokasi == lokasi)
+    if category:
+        stmt = stmt.where(Plant.category == category)
+    if location:
+        stmt = stmt.where(Plant.location == location)
     if search:
-        stmt = stmt.where(Plant.nama.ilike(f"%{search}%") | Plant.nama_latin.ilike(f"%{search}%"))
+        stmt = stmt.where(Plant.name.ilike(f"%{search}%") | Plant.scientific_name.ilike(f"%{search}%"))
 
     result = await db.execute(stmt)
     
@@ -69,11 +69,11 @@ async def get_plants_geojson(
             "geometry": json.loads(geojson_geom),
             "properties": {
                 "id": plant.id,
-                "nama": plant.nama,
-                "nama_latin": plant.nama_latin,
-                "kategori": plant.kategori,
-                "lokasi": plant.lokasi,
-                "foto_url": plant.foto_url
+                "name": plant.name,
+                "scientific_name": plant.scientific_name,
+                "category": plant.category,
+                "location": plant.location,
+                "image_url": plant.image_url
             }
         })
         
@@ -106,12 +106,12 @@ async def get_stats_summary(db: AsyncSession = Depends(get_db)):
     total_plants = total_result.scalar_one()
     
     cat_result = await db.execute(
-        select(Plant.kategori, func.count(Plant.id)).group_by(Plant.kategori)
+        select(Plant.category, func.count(Plant.id)).group_by(Plant.category)
     )
     by_category = {cat.value: count for cat, count in cat_result.all()}
     
     loc_result = await db.execute(
-        select(Plant.lokasi, func.count(Plant.id)).group_by(Plant.lokasi)
+        select(Plant.location, func.count(Plant.id)).group_by(Plant.location)
     )
     by_location = {loc: count for loc, count in loc_result.all()}
     

@@ -1,28 +1,28 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Any, Dict
-from src.models import KategoriTanaman
+from src.models import PlantCategory
 
 class PlantBase(BaseModel):
-    nama: str = Field(..., max_length=255)
-    nama_latin: str = Field(..., max_length=255)
-    kategori: KategoriTanaman
-    lokasi: str = Field(..., max_length=255)
-    skala: int
-    jumlah: int
-    foto_url: Optional[str] = None
+    name: str = Field(..., max_length=255)
+    scientific_name: str = Field(..., max_length=255)
+    category: PlantCategory
+    location: str = Field(..., max_length=255)
+    scale: int
+    quantity: int
+    image_url: Optional[str] = None
 
 class PlantCreate(PlantBase):
     lat: float
     lng: float
 
 class PlantUpdate(BaseModel):
-    nama: Optional[str] = Field(None, max_length=255)
-    nama_latin: Optional[str] = Field(None, max_length=255)
-    kategori: Optional[KategoriTanaman] = None
-    lokasi: Optional[str] = Field(None, max_length=255)
-    skala: Optional[int] = None
-    jumlah: Optional[int] = None
+    name: Optional[str] = Field(None, max_length=255)
+    scientific_name: Optional[str] = Field(None, max_length=255)
+    category: Optional[PlantCategory] = None
+    location: Optional[str] = Field(None, max_length=255)
+    scale: Optional[int] = None
+    quantity: Optional[int] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
 
