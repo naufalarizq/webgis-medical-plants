@@ -7,12 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.models import Plant, PlantCategory
-from src.schemas import PlantResponse
+from src.schemas import PaginatedPlants, PlantResponse
 
 router = APIRouter(prefix="/api", tags=["public"])
 
 
-@router.get("/plants", response_model=list[PlantResponse])
+@router.get("/plants", response_model=PaginatedPlants)
 async def list_plants(
     db: Annotated[AsyncSession, Depends(get_db)],
     category: PlantCategory | None = None,
@@ -24,17 +24,24 @@ async def list_plants(
     stmt = select(
         Plant, func.ST_Y(Plant.geom).label("lat"), func.ST_X(Plant.geom).label("lng")
     )
+    count_stmt = select(func.count()).select_from(Plant)
     if category:
         stmt = stmt.where(Plant.category == category)
+        count_stmt = count_stmt.where(Plant.category == category)
     if location:
         stmt = stmt.where(Plant.location == location)
+        count_stmt = count_stmt.where(Plant.location == location)
     if search:
         stmt = stmt.where(
+            Plant.name.ilike(f"%{search}%") | Plant.scientific_name.ilike(f"%{search}%")
+        )
+        count_stmt = count_stmt.where(
             Plant.name.ilike(f"%{search}%") | Plant.scientific_name.ilike(f"%{search}%")
         )
 
     stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
+    result_count = await db.scalar(count_stmt)
 
     plants = []
     for plant, lat, lng in result.all():
@@ -42,7 +49,7 @@ async def list_plants(
         plant.lng = lng
         plants.append(plant)
 
-    return plants
+    return {"data": plants, "total": result_count or 0, "skip": skip, "limit": limit}
 
 
 @router.get("/plants/geojson")

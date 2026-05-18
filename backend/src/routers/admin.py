@@ -12,6 +12,7 @@ from src.auth import get_current_username
 from src.database import get_db
 from src.models import Plant, PlantCategory
 from src.schemas import PlantResponse
+from src.settings import settings
 
 router = APIRouter(prefix="/api/admin/plants", tags=["admin"])
 
@@ -21,6 +22,22 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 
 class BulkDeleteRequest(BaseModel):
     ids: list[int]
+
+
+def validate_image(photo: UploadFile):
+    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+    MAX_FILE_SIZE_MB = 5
+
+    ext = photo.filename.split(".")[-1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            400, detail=f"File type '.{ext}' not allowed. Use: {ALLOWED_EXTENSIONS}"
+        )
+    photo.file.seek(0, 2)
+    size_mb = photo.file.tell() / (1024 * 1024)
+    photo.file.seek(0)  # reset
+    if size_mb > MAX_FILE_SIZE_MB:
+        raise HTTPException(400, detail=f"File too large. Max {MAX_FILE_SIZE_MB}MB")
 
 
 @router.post("", response_model=PlantResponse, status_code=status.HTTP_201_CREATED)
@@ -39,12 +56,13 @@ async def create_plant(
 ):
     image_url = None
     if photo:
+        validate_image(photo)
         file_extension = photo.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_extension}"
         file_path = os.path.join(STATIC_DIR, file_name)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(photo.file, buffer)
-        image_url = f"/{STATIC_DIR}/{file_name}"
+        image_url = f"{settings.BASE_URL}/{STATIC_DIR}/{file_name}"
 
     geom_wkt = f"SRID=4326;POINT({lng} {lat})"
 
@@ -90,12 +108,13 @@ async def update_plant(
         raise HTTPException(status_code=404, detail="Plant not found")
 
     if photo:
+        validate_image(photo)
         file_extension = photo.filename.split(".")[-1]
         file_name = f"{uuid.uuid4()}.{file_extension}"
         file_path = os.path.join(STATIC_DIR, file_name)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(photo.file, buffer)
-        plant.image_url = f"/{STATIC_DIR}/{file_name}"
+        plant.image_url = f"{settings.BASE_URL}/{STATIC_DIR}/{file_name}"
 
     if name is not None:
         plant.name = name

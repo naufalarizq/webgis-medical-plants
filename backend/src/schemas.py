@@ -42,6 +42,13 @@ class PlantResponse(PlantBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PaginatedPlants(BaseModel):
+    data: list[PlantResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 class AdminUserBase(BaseModel):
     username: str
     email: str
