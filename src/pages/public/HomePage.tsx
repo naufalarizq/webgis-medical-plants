@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getStats } from '@/api/plantApi'
 
-
 export default function HomePage() {
   const { data: stats } = useQuery({
     queryKey: ['stats-summary'],
