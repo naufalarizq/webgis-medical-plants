@@ -68,6 +68,7 @@ export interface GeoJSONParams {
 
 export interface StatsSummary {
   total_plants: number
+  added_last_7_days: number
   by_category: Partial<Record<PlantCategory, number>>
   by_location: Record<string, number>
 }
