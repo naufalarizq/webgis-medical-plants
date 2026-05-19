@@ -29,4 +29,11 @@
   }
 }
 
+/* Leaflet map styles fixes */
+.leaflet-container {
+  font-family: inherit;
+  width: 100%;
+  height: 100%;
+}
+
 @import "leaflet/dist/leaflet.css";
