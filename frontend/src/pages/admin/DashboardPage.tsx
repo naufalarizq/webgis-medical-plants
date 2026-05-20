@@ -42,7 +42,7 @@ export const DashboardPage: React.FC = () => {
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+12%</span>
           </div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Total Tanaman</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{(stats?.total_plants ?? 0).toLocaleString('id-ID')}</p>
+          <p className="text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
@@ -74,8 +74,8 @@ export const DashboardPage: React.FC = () => {
             </span>
             <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">New</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Tanaman Ditambah (7 Hari Terakhir)</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{(stats?.added_last_7_days ?? 0).toLocaleString('id-ID')}</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Tanaman Ditambah</p>
+          <p className="text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
         </div>
       </div>
 

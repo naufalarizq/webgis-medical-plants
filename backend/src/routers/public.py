@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -114,13 +113,6 @@ async def get_stats_summary(db: Annotated[AsyncSession, Depends(get_db)]):
     total_result = await db.execute(select(func.count(Plant.id)))
     total_plants = total_result.scalar_one()
 
-    # Query plants added in the last 7 days
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-    added_last_7_days_result = await db.execute(
-        select(func.count(Plant.id)).where(Plant.created_at >= seven_days_ago)
-    )
-    added_last_7_days = added_last_7_days_result.scalar_one()
-
     cat_result = await db.execute(
         select(Plant.category, func.count(Plant.id)).group_by(Plant.category)
     )
@@ -133,7 +125,6 @@ async def get_stats_summary(db: Annotated[AsyncSession, Depends(get_db)]):
 
     return {
         "total_plants": total_plants,
-        "added_last_7_days": added_last_7_days,
         "by_category": by_category,
         "by_location": by_location,
     }

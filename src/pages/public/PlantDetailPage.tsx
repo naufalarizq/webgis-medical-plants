@@ -11,12 +11,14 @@ export default function PlantDetailPage() {
   const { id } = useParams()
   const plantId = Number(id)
 
+  // Fetching data berdasarkan ID
   const { data: plant, isLoading, isError } = useQuery({
     queryKey: ['plant', plantId],
     queryFn: () => getPlant(plantId),
-    enabled: !isNaN(plantId),
+    enabled: !isNaN(plantId), // Jangan fetch jika ID tidak valid
   })
 
+  // Penanganan kondisi ID tidak valid
   if (isNaN(plantId)) {
     return (
       <div className="pt-12 px-6 max-w-[1440px] mx-auto min-h-[calc(100vh-80px)]">
@@ -25,6 +27,7 @@ export default function PlantDetailPage() {
     )
   }
 
+  // Penanganan kondisi Loading
   if (isLoading) {
     return (
       <div className="pt-12 min-h-[calc(100vh-80px)] flex items-center justify-center">
@@ -33,6 +36,7 @@ export default function PlantDetailPage() {
     )
   }
 
+  // Penanganan kondisi Error atau Data tidak ditemukan
   if (isError || !plant) {
     return (
       <div className="pt-12 px-6 max-w-[1440px] mx-auto min-h-[calc(100vh-80px)]">
@@ -45,6 +49,7 @@ export default function PlantDetailPage() {
     )
   }
 
+  // Format tanggal ISO ke format lokal Indonesia
   const formattedDate = new Date(plant.created_at).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -56,6 +61,7 @@ export default function PlantDetailPage() {
   return (
     <div className="pb-20 pt-12 px-6 md:px-12 max-w-[1440px] mx-auto min-h-[calc(100vh-80px)]">
       
+      {/* Breadcrumb & Back */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <nav className="flex items-center gap-2 text-on-surface-variant text-xs">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -73,8 +79,10 @@ export default function PlantDetailPage() {
         </Link>
       </div>
 
+      {/* Two-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
+        {/* Left Side: Image */}
         <div className="lg:col-span-7 space-y-4">
           <div className="relative group overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-low shadow-sm aspect-[4/3]">
             {plant.image_url ? (
@@ -90,6 +98,7 @@ export default function PlantDetailPage() {
               </div>
             )}
             
+            {/* Indikator Zoom (Visual only for aesthetics matching your design) */}
             {plant.image_url && (
               <div className="absolute bottom-4 right-4 bg-surface/80 backdrop-blur-md p-2 rounded-lg shadow-lg border border-outline-variant/20 pointer-events-none">
                 <div className="flex items-center justify-center p-2 rounded-md">
@@ -100,6 +109,7 @@ export default function PlantDetailPage() {
           </div>
         </div>
 
+        {/* Right Side: Info Card & Mini Map */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-surface border border-outline-variant/30 rounded-xl p-6 shadow-lg shadow-primary/5">
             
@@ -120,13 +130,12 @@ export default function PlantDetailPage() {
             {/* Grid Informasi Data */}
             <div className="grid grid-cols-2 gap-y-6 gap-x-4">
               <div>
-                <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Skala Pertumbuhan</p>
-                <p className="text-xs text-on-surface-variant tracking-wider font-regular mb-1">Ukuran tanaman ketika ditemukan</p>
+                <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Skala Penemuan</p>
                 <p className="text-base text-on-surface font-medium">{plant.scale}</p>
               </div>
               <div>
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Jumlah Terpantau</p>
-                <p className="text-base text-on-surface font-medium">{plant.quantity}</p>
+                <p className="text-base text-on-surface font-medium">{plant.quantity} Spesimen</p>
               </div>
               <div>
                 <p className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold mb-1">Kategori Sistem</p>
@@ -153,13 +162,14 @@ export default function PlantDetailPage() {
                 </div>
               </div>
 
+              {/* Mini Embedded Map (Tinggi 200px sesuai spec) */}
               <div className="mt-4 h-[200px] w-full rounded-lg overflow-hidden border border-outline-variant/30 relative z-0">
                 <MapContainer 
                   center={[plant.lat, plant.lng]} 
                   zoom={16} 
-                  zoomControl={false} 
+                  zoomControl={false} // Disable zoom control on mini map to keep it clean
                   className="w-full h-full"
-                  dragging={false} 
+                  dragging={false} // Opsional: nonaktifkan interaksi drag agar tidak mengganggu scroll halaman
                   scrollWheelZoom={false}
                 >
                   <TileLayer
