@@ -6,6 +6,7 @@ import { CATEGORY_CONFIG } from '@/utils/categoryConfig'
 import CategoryBadge from '@/components/ui/CategoryBadge'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import EmptyState from '@/components/ui/EmptyState'
+import { PlantCategory } from '@/types'
 
 export default function PlantDetailPage() {
   const { id } = useParams()
@@ -51,7 +52,7 @@ export default function PlantDetailPage() {
     year: 'numeric'
   })
 
-  const markerColor = CATEGORY_CONFIG[plant.category]?.markerColor || '#000'
+  const markerColor = CATEGORY_CONFIG[plant.category as PlantCategory]?.markerColor || '#000'
 
   return (
     <div className="pb-20 pt-12 px-6 md:px-12 max-w-[1440px] mx-auto min-h-[calc(100vh-80px)]">
