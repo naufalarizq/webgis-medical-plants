@@ -13,7 +13,7 @@ export const DashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+      <div className="p-4 sm:p-6 lg:p-8 flex items-center justify-center min-h-[60vh]">
         <div className="w-10 h-10 border-4 border-[#004d26] border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
@@ -26,77 +26,77 @@ export const DashboardPage: React.FC = () => {
   const totalLocationCount = Object.values(stats?.by_location || {}).reduce((a, b) => a + b, 0) || 1
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 max-w-7xl mx-auto w-full">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
-        <p className="text-sm text-slate-500 mt-0.5">Real-time biodiversity monitoring and academic research metrics.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Dashboard Overview</h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Real-time biodiversity monitoring and academic research metrics.</p>
       </div>
 
       {/* Stats Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between text-slate-400">
             <span className="h-10 w-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <SproutIcon className="h-5 w-5" />
             </span>
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+12%</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Total Tanaman</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Total Tanaman</p>
+          <p className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between text-slate-400">
             <span className="h-10 w-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
               <FolderIcon className="h-5 w-5" />
             </span>
             <span className="text-xs font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full">Stable</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Total Kategori</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{categoryEntries.length}</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Total Kategori</p>
+          <p className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{categoryEntries.length}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between text-slate-400">
             <span className="h-10 w-10 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
               <MapPinIcon className="h-5 w-5" />
             </span>
             <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+4</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Total Lokasi</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{locationEntries.length}</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Total Lokasi</p>
+          <p className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{locationEntries.length}</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
           <div className="flex items-center justify-between text-slate-400">
             <span className="h-10 w-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
               <CalendarPlusIcon className="h-5 w-5" />
             </span>
             <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">New</span>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-3">Tanaman Ditambah</p>
-          <p className="text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-4">Tanaman Ditambah</p>
+          <p className="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{stats?.total_plants.toLocaleString('id-ID') || 0}</p>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Bar Chart Replacement */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-100">
-          <h3 className="text-base font-bold text-slate-800 mb-6">Tanaman per Kategori</h3>
-          <div className="space-y-4 h-64 flex flex-col justify-end">
-            <div className="flex items-end justify-between gap-4 h-48 px-2">
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 flex flex-col shadow-sm">
+          <h3 className="text-sm sm:text-base font-bold text-slate-800 mb-6">Tanaman per Kategori</h3>
+          <div className="space-y-4 flex-1 flex flex-col justify-end min-h-[200px] sm:min-h-[250px]">
+            <div className="flex items-end justify-between gap-2 sm:gap-4 h-48 sm:h-56 px-1 sm:px-2">
               {categoryEntries.map(([cat, count]) => {
                 const max = Math.max(...categoryEntries.map(([, v]) => v)) || 1
                 const heightPct = `${(count / max) * 100}%`
                 return (
-                  <div key={cat} className="flex-1 flex flex-col items-center h-full justify-end group">
-                    <span className="text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</span>
+                  <div key={cat} className="flex-1 flex flex-col items-center h-full justify-end group cursor-default">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity mb-1">{count}</span>
                     <div 
                       style={{ height: heightPct, backgroundColor: CATEGORY_CONFIG[cat]?.markerColor || '#cbd5e1' }}
-                      className="w-full rounded-t-md transition-all duration-500 hover:brightness-95"
+                      className="w-full rounded-t-md transition-all duration-500 hover:brightness-95 min-h-[4px]"
                     />
-                    <span className="text-[10px] font-medium text-slate-500 mt-2 text-center truncate w-full">
+                    <span className="text-[8px] sm:text-[10px] font-medium text-slate-500 mt-2 text-center truncate w-full">
                       {CATEGORY_CONFIG[cat]?.label || cat}
                     </span>
                   </div>
@@ -107,20 +107,20 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Donut Chart Replacement */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 flex flex-col">
-          <h3 className="text-base font-bold text-slate-800 mb-4">Distribusi Lokasi</h3>
-          <div className="flex-1 flex flex-col justify-center">
-            {/* Legend list with breakdown percentages */}
-            <div className="space-y-3">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 flex flex-col shadow-sm">
+          <h3 className="text-sm sm:text-base font-bold text-slate-800 mb-4">Distribusi Lokasi</h3>
+          <div className="flex-1 flex flex-col justify-start">
+            {/* Legend list with overflow management for robustness */}
+            <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
               {locationEntries.map(([loc, count]) => {
                 const pct = Math.round((count / totalLocationCount) * 100)
                 return (
-                  <div key={loc} className="flex items-center justify-between border-b border-slate-50 pb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-[#004d26]" />
-                      <span className="text-xs font-semibold text-slate-600">{loc}</span>
+                  <div key={loc} className="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-2 overflow-hidden pr-2">
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#004d26] shrink-0" />
+                      <span className="text-[10px] sm:text-xs font-semibold text-slate-600 truncate">{loc}</span>
                     </div>
-                    <span className="text-xs font-bold text-slate-800">{pct}%</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-800 shrink-0">{pct}%</span>
                   </div>
                 )
               })}

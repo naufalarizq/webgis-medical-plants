@@ -1,270 +1,227 @@
-import React, { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getPlants, deletePlant, bulkDeletePlants } from '@/api/plantApi'
-import CategoryBadge from '@/components/ui/CategoryBadge'
-import ConfirmModal from '@/components/ui/ConfirmModal'
-import { ChevronLeftIcon, ChevronRightIcon, MapPinIcon, PlusIcon, SproutIcon } from '@/components/ui/AdminIcons'
-import { CAMPUS_LOCATIONS, PLANT_CATEGORIES, CATEGORY_CONFIG } from '@/utils/categoryConfig'
-import { Link, useNavigate } from 'react-router-dom'
-import type { PlantCategory } from '@/types'
+import React, { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { createPlant, updatePlant, getPlant } from '@/api/plantApi'
+import { useNavigate, useParams, Link } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import {
+  ChevronLeftIcon,
+  CloudUploadIcon,
+  FileTextIcon,
+  ImageIcon,
+  InfoIcon,
+  LocateFixedIcon,
+  MapPinIcon,
+  SaveIcon
+} from '@/components/ui/AdminIcons'
+import { PLANT_CATEGORIES, CATEGORY_CONFIG } from '@/utils/categoryConfig'
+import * as L from 'leaflet'
 import toast from 'react-hot-toast'
 
-export const ManagePlantsPage: React.FC = () => {
-  const queryClient = useQueryClient()
+const DefaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+})
+// @ts-ignore
+delete L.Marker.prototype.options.icon
+L.Marker.prototype.options.icon = DefaultIcon
+
+const plantFormSchema = z.object({
+  name: z.string().min(1, 'Nama umum tanaman wajib diisi').max(255),
+  scientific_name: z.string().min(1, 'Nama latin ilmiah wajib diisi').max(255),
+  category: z.enum(['ornamental', 'food', 'herbal', 'aromatic', 'shade'], 'Kategori tanaman wajib diisi'),
+  location: z.string().min(1, 'Lokasi kampus penempatan wajib diisi'),
+  scale: z.coerce.number().int().positive('Skala pertumbuhan harus berupa angka positif'),
+  quantity: z.coerce.number().int().positive('Jumlah spesimen harus bernilai minimal 1'),
+  lat: z.coerce.number().min(-90).max(90, 'Latitude tidak valid'),
+  lng: z.coerce.number().min(-180).max(180, 'Longitude tidak valid'),
+  photo: z.any().optional()
+})
+
+type PlantFormInputs = z.infer<typeof plantFormSchema>
+
+interface Props {
+  mode: 'add' | 'edit'
+}
+
+export const PlantFormPage: React.FC<Props> = ({ mode }) => {
   const navigate = useNavigate()
+  const { id } = useParams()
+  const plantId = id ? Number(id) : null
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
-  // Filter & Pagination States
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState<PlantCategory | ''>('')
-  const [location, setLocation] = useState('')
-  const [limit] = useState(10)
-  const [skip, setSkip] = useState(0)
-
-  // Selection & Modal States
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false)
-
-  // Query Data Hook
-  const { data, isLoading } = useQuery({
-    queryKey: ['plants-list', { search, category, location, skip, limit }],
-    queryFn: () => getPlants({ search, category, location, skip, limit }),
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PlantFormInputs>({
+    resolver: zodResolver(plantFormSchema),
+    defaultValues: { scale: 3, quantity: 1, lat: -6.5592, lng: 106.7061 }
   })
 
-  // Mutation Hooks
-  const deleteMutation = useMutation({
-    mutationFn: deletePlant,
-    onSuccess: () => {
-      toast.success('Spesimen berhasil dihapus')
-      queryClient.invalidateQueries({ queryKey: ['plants-list'] })
-      setDeletingId(null)
-    }
+  const currentLat = watch('lat')
+  const currentLng = watch('lng')
+  const photoFile = watch('photo')
+
+  const { data: existingPlant, isLoading: isFetchingPlant } = useQuery({
+    queryKey: ['plant-detail', plantId],
+    queryFn: () => getPlant(plantId!),
+    enabled: mode === 'edit' && plantId !== null,
   })
 
-  const bulkDeleteMutation = useMutation({
-    mutationFn: bulkDeletePlants,
-    onSuccess: () => {
-      toast.success(`${selectedIds.length} spesimen berhasil dihapus secara massal`)
-      queryClient.invalidateQueries({ queryKey: ['plants-list'] })
-      setSelectedIds([])
-      setIsBulkDeleteOpen(false)
+  useEffect(() => {
+    if (mode === 'edit' && existingPlant) {
+      reset({
+        name: existingPlant.name,
+        scientific_name: existingPlant.scientific_name,
+        category: existingPlant.category,
+        location: existingPlant.location,
+        scale: existingPlant.scale,
+        quantity: existingPlant.quantity,
+        lat: existingPlant.lat,
+        lng: existingPlant.lng
+      })
+      if (existingPlant.image_url) setImagePreview(existingPlant.image_url)
     }
-  })
+  }, [existingPlant, mode, reset])
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked && data?.data) {
-      setSelectedIds(data.data.map((p) => p.id))
-    } else {
-      setSelectedIds([])
+  useEffect(() => {
+    if (photoFile && photoFile[0] instanceof File) {
+      const reader = new FileReader()
+      reader.onloadend = () => setImagePreview(reader.result as string)
+      reader.readAsDataURL(photoFile[0])
     }
+  }, [photoFile])
+
+  const MapClickHandler = () => {
+    useMapEvents({
+      click(e: L.LeafletMouseEvent) { 
+        setValue('lat', Number(e.latlng.lat.toFixed(6)), { shouldValidate: true })
+        setValue('lng', Number(e.latlng.lng.toFixed(6)), { shouldValidate: true })
+      }
+    })
+    return null
   }
 
-  const handleSelectOne = (id: number, checked: boolean) => {
-    if (checked) {
-      setSelectedIds((prev) => [...prev, id])
-    } else {
-      setSelectedIds((prev) => prev.filter((item) => item !== id))
-    }
+  const mapCenter: [number, number] = [currentLat || -6.5592, currentLng || 106.7061]
+
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) return toast.error('Browser Anda tidak mendukung Geolocation')
+    toast.loading('Memperoleh koordinat GPS...')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        toast.dismiss()
+        setValue('lat', Number(pos.coords.latitude.toFixed(6)), { shouldValidate: true })
+        setValue('lng', Number(pos.coords.longitude.toFixed(6)), { shouldValidate: true })
+        toast.success('Lokasi GPS berhasil disinkronkan!')
+      },
+      () => { toast.dismiss(); toast.error('Gagal mendeteksi lokasi.') }
+    )
   }
+
+  const formMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      return mode === 'add' ? createPlant(formData) : updatePlant(plantId!, formData)
+    },
+    onSuccess: () => {
+      toast.success(mode === 'add' ? 'Koleksi baru berhasil ditambahkan' : 'Data berhasil diperbarui')
+      navigate('/admin/plants')
+    },
+    onError: () => toast.error('Terjadi kesalahan data.')
+  })
+
+  const onSubmitForm = (values: PlantFormInputs) => {
+    const fd = new FormData()
+    fd.append('name', values.name)
+    fd.append('scientific_name', values.scientific_name)
+    fd.append('category', values.category)
+    fd.append('location', values.location)
+    fd.append('scale', String(values.scale))
+    fd.append('quantity', String(values.quantity))
+    fd.append('lat', String(values.lat))
+    fd.append('lng', String(values.lng))
+    if (values.photo?.[0]) fd.append('photo', values.photo[0])
+    formMutation.mutate(fd)
+  }
+
+  if (isFetchingPlant) return <div className="p-8 text-center text-slate-400">Memuat data...</div>
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#004d26]">Kelola Tanaman</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manajemen database keanekaragaman hayati IeB University</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
-            <button
-              onClick={() => setIsBulkDeleteOpen(true)}
-              className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 text-sm font-semibold rounded-xl hover:bg-red-100 transition-colors"
-            >
-              Hapus {selectedIds.length} Item
-            </button>
-          )}
-          <Link
-            to="/admin/plants/add"
-            className="px-4 py-2 bg-[#004d26] hover:bg-[#003318] text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2"
-          >
-            <PlusIcon className="h-4 w-4" /> Tambah Tanaman
-          </Link>
-        </div>
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto space-y-6">
+      <Link to="/admin/plants" className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">
+        <ChevronLeftIcon className="h-4 w-4" /> KEMBALI KE DAFTAR
+      </Link>
+
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-[#004d26]">
+          {mode === 'add' ? 'Tambah Koleksi Baru' : 'Edit Spesimen'}
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">Lengkapi data biodiversitas untuk inventarisasi kampus.</p>
       </div>
 
-      {/* Filters Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-slate-100 shadow-xs">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setSkip(0) }}
-          placeholder="Cari nama spesies, lokasi..."
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#004d26]/20 focus:border-[#004d26]"
-        />
-        <select
-          value={category}
-          onChange={(e) => { setCategory(e.target.value as PlantCategory | ''); setSkip(0) }}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#004d26]/20 focus:border-[#004d26]"
-        >
-          <option value="">Semua Spesies / Kategori</option>
-          {PLANT_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>{CATEGORY_CONFIG[cat].label}</option>
-          ))}
-        </select>
-        <select
-          value={location}
-          onChange={(e) => { setLocation(e.target.value); setSkip(0) }}
-          className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#004d26]/20 focus:border-[#004d26]"
-        >
-          <option value="">Seluruh Wilayah Kampus</option>
-          {CAMPUS_LOCATIONS.map((loc) => (
-            <option key={loc} value={loc}>{loc}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white border border-slate-100 rounded-xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                <th className="p-4 w-12 text-center">
-                  <input
-                    type="checkbox"
-                    onChange={handleSelectAll}
-                    checked={data?.data && data.data.length > 0 && selectedIds.length === data.data.length}
-                    className="rounded border-slate-300 text-[#004d26] focus:ring-[#004d26]"
-                  />
-                </th>
-                <th className="p-4">Foto</th>
-                <th className="p-4">Nama Spesies</th>
-                <th className="p-4">Kategori</th>
-                <th className="p-4">Lokasi</th>
-                <th className="p-4">Tanggal Dibuat</th>
-                <th className="p-4 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="animate-pulse">
-                    <td colSpan={7} className="p-6 text-center text-slate-400">Memuat data baris...</td>
-                  </tr>
-                ))
-              ) : data?.data.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
-                    Tidak ditemukan kecocokan data tanaman.
-                  </td>
-                </tr>
-              ) : (
-                data?.data.map((plant) => (
-                  <tr key={plant.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="p-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(plant.id)}
-                        onChange={(e) => handleSelectOne(plant.id, e.target.checked)}
-                        className="rounded border-slate-300 text-[#004d26] focus:ring-[#004d26]"
-                      />
-                    </td>
-                    <td className="p-4">
-                      {plant.image_url ? (
-                        <img
-                          src={plant.image_url}
-                          alt={plant.name}
-                          className="w-10 h-10 object-cover rounded-lg border border-slate-100"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">
-                          <SproutIcon className="h-5 w-5" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <p className="font-bold text-slate-800">{plant.name}</p>
-                      <p className="text-xs italic text-slate-400 mt-0.5">{plant.scientific_name}</p>
-                    </td>
-                    <td className="p-4">
-                      <CategoryBadge category={plant.category} />
-                    </td>
-                    <td className="p-4 text-slate-500 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <MapPinIcon className="h-4 w-4 text-emerald-700" />
-                        <span>{plant.location}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-slate-400 text-xs">
-                      {new Date(plant.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => navigate(`/admin/plants/edit/${plant.id}`)}
-                        className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-all cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDeletingId(plant.id)}
-                        className="px-2.5 py-1 text-xs font-semibold text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-all cursor-pointer"
-                      >
-                        Hapus
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Custom Pagination Footer */}
-        {data && data.total > 0 && (
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-            <div>
-              Menampilkan {skip + 1}–{Math.min(skip + limit, data.total)} dari {data.total} data
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                aria-label="Halaman sebelumnya"
-                disabled={skip === 0}
-                onClick={() => setSkip((p) => Math.max(0, p - limit))}
-                className="p-1.5 rounded bg-white border border-slate-200 disabled:opacity-50 cursor-pointer hover:bg-slate-50"
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </button>
-              <button
-                aria-label="Halaman berikutnya"
-                disabled={skip + limit >= data.total}
-                onClick={() => setSkip((p) => p + limit)}
-                className="p-1.5 rounded bg-white border border-slate-200 disabled:opacity-50 cursor-pointer hover:bg-slate-50"
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </button>
+      <form onSubmit={handleSubmit(onSubmitForm)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-2">
+              <FileTextIcon className="h-4 w-4 text-emerald-700" /> Informasi Dasar
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-600 mb-1">Nama Umum</label>
+                <input {...register('name')} className="w-full px-3 py-2 bg-slate-50 border rounded-lg text-sm focus:ring-2 focus:ring-[#004d26]/10" />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-600 mb-1">Nama Latin</label>
+                <input {...register('scientific_name')} className="w-full px-3 py-2 bg-slate-50 border rounded-lg text-sm italic focus:ring-2 focus:ring-[#004d26]/10" />
+              </div>
+              <select {...register('category')} className="px-3 py-2 bg-slate-50 border rounded-lg text-sm">
+                {PLANT_CATEGORIES.map((cat) => <option key={cat} value={cat}>{CATEGORY_CONFIG[cat].label}</option>)}
+              </select>
+              <input {...register('location')} placeholder="Lokasi..." className="px-3 py-2 bg-slate-50 border rounded-lg text-sm" />
+              <input type="number" {...register('scale')} placeholder="Skala (m)" className="px-3 py-2 bg-slate-50 border rounded-lg text-sm" />
+              <input type="number" {...register('quantity')} placeholder="Jumlah" className="px-3 py-2 bg-slate-50 border rounded-lg text-sm" />
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Confirmation Modals */}
-      <ConfirmModal
-        isOpen={deletingId !== null}
-        title="Hapus Spesimen Tanaman"
-        message="Apakah Anda yakin ingin menolak dan menghapus data spesimen biodiversitas ini secara permanen?"
-        onConfirm={() => deletingId && deleteMutation.mutate(deletingId)}
-        onCancel={() => setDeletingId(null)}
-        isLoading={deleteMutation.isPending}
-      />
+          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <ImageIcon className="h-4 w-4 text-emerald-700" /> Dokumentasi Foto
+            </h3>
+            <div className="relative border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors">
+              <input type="file" accept="image/*" {...register('photo')} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <CloudUploadIcon className="h-8 w-8 text-slate-400 mx-auto" />
+              <p className="text-xs font-bold mt-2">Unggah Foto Spesimen</p>
+            </div>
+            {imagePreview && <img src={imagePreview} className="mt-4 mx-auto max-h-40 rounded-lg" alt="Preview" />}
+          </div>
+        </div>
 
-      <ConfirmModal
-        isOpen={isBulkDeleteOpen}
-        title="Hapus Massal Koleksi"
-        message={`Apakah Anda yakin ingin menghapus sebanyak ${selectedIds.length} spesimen tanaman terpilih sekaligus dari database?`}
-        onConfirm={() => bulkDeleteMutation.mutate(selectedIds)}
-        onCancel={() => setIsBulkDeleteOpen(false)}
-        isLoading={bulkDeleteMutation.isPending}
-      />
+        <div className="space-y-6">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm sticky top-24">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <MapPinIcon className="h-4 w-4 text-emerald-700" /> Geolokasi
+            </h3>
+            <div className="h-64 rounded-xl overflow-hidden mb-4 border border-slate-100">
+              <MapContainer center={mapCenter} zoom={14} className="h-full w-full">
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <MapClickHandler />
+                {currentLat && currentLng && <Marker position={[currentLat, currentLng]} />}
+              </MapContainer>
+            </div>
+            <button type="button" onClick={handleGetCurrentLocation} className="w-full py-2 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold flex items-center justify-center gap-1 mb-4">
+              <LocateFixedIcon className="h-4 w-4" /> Gunakan GPS Saya
+            </button>
+            <div className="grid grid-cols-2 gap-2 mb-6">
+              <input type="number" {...register('lat')} className="px-2 py-1.5 bg-slate-50 border rounded text-xs font-mono" />
+              <input type="number" {...register('lng')} className="px-2 py-1.5 bg-slate-50 border rounded text-xs font-mono" />
+            </div>
+            <button type="submit" disabled={formMutation.isPending} className="w-full py-3 bg-[#004d26] text-white font-bold rounded-xl text-sm hover:bg-[#003318] transition-colors">
+              {formMutation.isPending ? 'Menyimpan...' : 'Simpan Data Spesimen'}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   )
 }
