@@ -51,3 +51,32 @@ Buka terminal dan jalankan perintah berikut:
 ```bash
 git clone [https://github.com/naufalarizq/webgis-medical-plants.git](https://github.com/naufalarizq/webgis-medical-plants.git)
 cd webgis-medical-plants
+
+### 2. Jalankan Backend (FastAPI)
+
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+### 3. Jalankan Frontend (React/Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. Akses Aplikasi
+
+Buka browser dan kunjungi: `http://localhost:5173/`
+
+> ⚠️ Pastikan file `.env` sudah dikonfigurasi dan migrasi database sudah dijalankan sebelum memulai.
+
+---
+
+## 📄 Lisensi
+
+© 2026 Tim CAPS-24 — Departemen Ilmu Komputer, IPB University.  
+Dikembangkan untuk kebutuhan akademik dan riset pemantauan biodiversitas.
