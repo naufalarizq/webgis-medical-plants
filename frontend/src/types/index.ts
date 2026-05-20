@@ -1,5 +1,3 @@
-// src/types/index.ts
-
 export type PlantCategory =
   | 'ornamental'
   | 'food'

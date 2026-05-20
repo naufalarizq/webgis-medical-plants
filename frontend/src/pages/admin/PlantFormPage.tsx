@@ -33,7 +33,7 @@ L.Marker.prototype.options.icon = DefaultIcon
 const plantFormSchema = z.object({
   name: z.string().min(1, 'Nama umum tanaman wajib diisi').max(255),
   scientific_name: z.string().min(1, 'Nama latin ilmiah wajib diisi').max(255),
-  category: z.enum(['ornamental', 'food', 'herbal', 'aromatic', 'shade']),
+  category: z.enum(['ornamental', 'food', 'herbal', 'aromatic', 'shade'], 'Kategori tanaman wajib diisi'),
   location: z.string().min(1, 'Lokasi kampus penempatan wajib diisi'),
   scale: z.coerce.number().int().positive('Skala pertumbuhan harus berupa angka positif'),
   quantity: z.coerce.number().int().positive('Jumlah spesimen harus bernilai minimal 1'),
@@ -81,6 +81,7 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
         quantity: existingPlant.quantity,
         lat: existingPlant.lat,
         lng: existingPlant.lng
+        
       })
       if (existingPlant.image_url) {
         setImagePreview(existingPlant.image_url)
