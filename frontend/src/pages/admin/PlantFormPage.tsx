@@ -26,7 +26,6 @@ const DefaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 })
-// @ts-ignore (Abaikan pengecekan tipe objek prototipe internal leaflet)
 delete L.Marker.prototype.options.icon
 L.Marker.prototype.options.icon = DefaultIcon
 
@@ -63,7 +62,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
   const currentLng = watch('lng')
   const photoFile = watch('photo')
 
-  // Ambil data jika dalam mode edit
   const { data: existingPlant, isLoading: isFetchingPlant } = useQuery({
     queryKey: ['plant-detail', plantId],
     queryFn: () => getPlant(plantId!),
@@ -89,7 +87,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
     }
   }, [existingPlant, mode, reset])
 
-  // Generator Pratinjau Gambar Efek Samping lokal
   useEffect(() => {
     if (photoFile && photoFile[0] instanceof File) {
       const reader = new FileReader()
@@ -98,7 +95,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
     }
   }, [photoFile])
 
-  // Map Click Event Listener
     const MapClickHandler = () => {
     useMapEvents({
         click(e: L.LeafletMouseEvent) { 
@@ -129,7 +125,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
     )
   }
 
-  // Mutasi Pengiriman Form
   const formMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       return mode === 'add' ? createPlant(formData) : updatePlant(plantId!, formData)
@@ -144,7 +139,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
   })
 
   const onSubmitForm = (values: PlantFormInputs) => {
-    // ATURAN KRITIS BERKAS: Harus menggunakan FormData
     const fd = new FormData()
     fd.append('name', values.name)
     fd.append('scientific_name', values.scientific_name)
@@ -184,9 +178,7 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmitForm)} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Columns - Form Inputs */}
         <div className="md:col-span-2 space-y-6">
-          {/* Card Basis Informasi Dasar */}
           <div className="bg-white p-6 rounded-xl border border-slate-100 space-y-4 shadow-xs">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-2">
               <FileTextIcon className="h-4 w-4 text-emerald-700" /> Informasi Dasar
@@ -251,7 +243,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
             </div>
           </div>
 
-          {/* Dokumentasi Foto Card */}
           <div className="bg-white p-6 rounded-xl border border-slate-100 space-y-4 shadow-xs">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-2">
               <ImageIcon className="h-4 w-4 text-emerald-700" /> Dokumentasi Foto
@@ -277,7 +268,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
           </div>
         </div>
 
-        {/* Right Column - Geolocation Matrix */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl border border-slate-100 space-y-4 shadow-xs flex flex-col h-full justify-between">
             <div>
@@ -285,7 +275,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
                 <MapPinIcon className="h-4 w-4 text-emerald-700" /> Geolokasi Spesimen
               </h3>
 
-              {/* Mini Interactive Map container box wrapper rule */}
               <div className="w-full h-56 rounded-xl overflow-hidden border border-slate-100 shadow-inner relative mb-4 z-10">
                 <MapContainer center={mapCenter} zoom={14} className="h-full w-full">
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
