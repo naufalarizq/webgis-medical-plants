@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import PublicLayout from '@/components/layout/PublicLayout'
+import Navbar from '@/components/layout/Navbar'
 import HomePage from '@/pages/public/HomePage'
 import MapPage from '@/pages/public/MapPage'
 import TablePage from '@/pages/public/TablePage'
@@ -22,6 +23,17 @@ function AdminLayout() {
     <div className="flex min-h-screen bg-[#f7f9f6]">
       <AdminSidebar />
       <main className="flex-1 overflow-y-auto h-screen">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+function AdminLoginLayout() {
+  return (
+    <div className="min-h-screen bg-background text-on-surface font-body-md overflow-x-hidden">
+      <Navbar />
+      <main className="pt-20">
         <Outlet />
       </main>
     </div>
@@ -50,14 +62,19 @@ const router = createBrowserRouter([
     ],
   },
   
-  // ── RUTE AUTENTIKASI ADMIN (Tanpa Sidebar/Navbar) ────────
+  // ── RUTE AUTENTIKASI ADMIN (Navbar publik, tanpa sidebar admin) ────────
   {
-    path: '/admin/login',
-    element: (
-      <Suspense fallback={<AdminPageLoader />}>
-        <LoginPage />
-      </Suspense>
-    ),
+    element: <AdminLoginLayout />,
+    children: [
+      {
+        path: '/admin/login',
+        element: (
+          <Suspense fallback={<AdminPageLoader />}>
+            <LoginPage />
+          </Suspense>
+        ),
+      },
+    ],
   },
 
   // ── RUTE PANEL ADMIN (Terproteksi Middleware JWT) ─────────

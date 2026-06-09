@@ -70,6 +70,13 @@ export interface StatsSummary {
   by_location: Record<string, number>
 }
 
+export interface LocationOption {
+  name: string
+  latitude: number
+  longitude: number
+  is_default: boolean
+}
+
 export interface AuthToken {
   access_token: string
   token_type: string

@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createPlant, updatePlant, getPlant } from '@/api/plantApi'
+import { createPlant, updatePlant, getLocations, getPlant } from '@/api/plantApi'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import {
   ChevronLeftIcon,
   CloudUploadIcon,
@@ -16,7 +16,7 @@ import {
   MapPinIcon,
   SaveIcon
 } from '@/components/ui/AdminIcons'
-import { PLANT_CATEGORIES, CATEGORY_CONFIG } from '@/utils/categoryConfig'
+import { PLANT_CATEGORIES, CATEGORY_CONFIG, buildLocationOptions } from '@/utils/categoryConfig'
 import * as L from 'leaflet'
 import toast from 'react-hot-toast'
 
@@ -48,26 +48,67 @@ interface Props {
   mode: 'add' | 'edit'
 }
 
+const CUSTOM_LOCATION_VALUE = '__custom_location__'
+
+const MapFlyTo = ({ target }: { target: [number, number] | null }) => {
+  const map = useMap()
+
+  useEffect(() => {
+    if (target) {
+      map.flyTo(target, Math.max(map.getZoom(), 16), { duration: 0.8 })
+    }
+  }, [map, target])
+
+  return null
+}
+
+const MapClickHandler = ({ onSelect }: { onSelect: (lat: number, lng: number) => void }) => {
+  useMapEvents({
+    click(e: L.LeafletMouseEvent) {
+      onSelect(Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6)))
+    }
+  })
+
+  return null
+}
+
 export const PlantFormPage: React.FC<Props> = ({ mode }) => {
   const navigate = useNavigate()
   const { id } = useParams()
   const plantId = id ? Number(id) : null
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isAddingCustomLocation, setIsAddingCustomLocation] = useState(false)
+  const [flyTarget, setFlyTarget] = useState<[number, number] | null>(null)
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PlantFormFieldValues, unknown, PlantFormInputs>({
+  const { register, handleSubmit, setValue, reset, control, formState: { errors } } = useForm<PlantFormFieldValues, unknown, PlantFormInputs>({
     resolver: zodResolver(plantFormSchema),
     defaultValues: { scale: 3, quantity: 1, lat: -6.5592, lng: 106.7061 }
   })
 
-  const currentLat = watch('lat') as PlantFormInputs['lat']
-  const currentLng = watch('lng') as PlantFormInputs['lng']
-  const photoFile = watch('photo') as FileList | undefined
+  const currentLat = useWatch({ control, name: 'lat' }) as PlantFormInputs['lat']
+  const currentLng = useWatch({ control, name: 'lng' }) as PlantFormInputs['lng']
+  const currentLocation = useWatch({ control, name: 'location' }) as PlantFormInputs['location'] | undefined
+  const photoFile = useWatch({ control, name: 'photo' }) as FileList | undefined
+  const numericLat = Number(currentLat)
+  const numericLng = Number(currentLng)
 
   const { data: existingPlant, isLoading: isFetchingPlant } = useQuery({
     queryKey: ['plant-detail', plantId],
     queryFn: () => getPlant(plantId!),
     enabled: mode === 'edit' && plantId !== null,
   })
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: getLocations,
+  })
+
+  const locationOptions = buildLocationOptions(locations)
+  const selectedLocation = locationOptions.find(
+    (location) => location.name === currentLocation
+  )
+  const isCustomLocationMode = isAddingCustomLocation || Boolean(currentLocation && !selectedLocation)
+  const locationSelectValue = isCustomLocationMode ? CUSTOM_LOCATION_VALUE : selectedLocation?.name ?? ''
 
   useEffect(() => {
     if (mode === 'edit' && existingPlant) {
@@ -82,9 +123,6 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
         lng: existingPlant.lng
         
       })
-      if (existingPlant.image_url) {
-        setImagePreview(existingPlant.image_url)
-      }
     }
   }, [existingPlant, mode, reset])
 
@@ -96,17 +134,40 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
     }
   }, [photoFile])
 
-    const MapClickHandler = () => {
-    useMapEvents({
-        click(e: L.LeafletMouseEvent) { 
-        setValue('lat', Number(e.latlng.lat.toFixed(6)), { shouldValidate: true })
-        setValue('lng', Number(e.latlng.lng.toFixed(6)), { shouldValidate: true })
-        }
-    })
-    return null
+  const handleMapSelect = useCallback((lat: number, lng: number) => {
+    setValue('lat', lat, { shouldValidate: true, shouldDirty: true })
+    setValue('lng', lng, { shouldValidate: true, shouldDirty: true })
+  }, [setValue])
+
+  const displayedImagePreview = imagePreview ?? existingPlant?.image_url ?? null
+
+  const mapCenter: [number, number] = [
+    Number.isFinite(numericLat) ? numericLat : -6.5592,
+    Number.isFinite(numericLng) ? numericLng : 106.7061
+  ]
+
+  const handleLocationChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value
+
+    if (value === CUSTOM_LOCATION_VALUE) {
+      setIsAddingCustomLocation(true)
+      setValue('location', '', { shouldValidate: true })
+      return
     }
 
-    const mapCenter: [number, number] = [currentLat || -6.5592, currentLng || 106.7061]
+    setIsAddingCustomLocation(false)
+
+    const selectedLocation = locationOptions.find((location) => location.name === value)
+    if (!selectedLocation) {
+      setValue('location', '', { shouldValidate: true })
+      return
+    }
+
+    setValue('location', selectedLocation.name, { shouldValidate: true, shouldDirty: true })
+    setValue('lat', selectedLocation.latitude, { shouldValidate: true, shouldDirty: true })
+    setValue('lng', selectedLocation.longitude, { shouldValidate: true, shouldDirty: true })
+    setFlyTarget([selectedLocation.latitude, selectedLocation.longitude])
+  }
 
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) return toast.error('Browser Anda tidak mendukung Geolocation')
@@ -222,12 +283,25 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5">Lokasi Kampus</label>
-                <input
-                  type="text"
-                  {...register('location')}
-                  placeholder="Dramaga, Bogor, dsb."
+                <select
+                  value={locationSelectValue}
+                  onChange={handleLocationChange}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#004d26]/10"
-                />
+                >
+                  <option value="" disabled>Pilih lokasi kampus</option>
+                  {locationOptions.map((location) => (
+                    <option key={location.name} value={location.name}>{location.name}</option>
+                  ))}
+                  <option value={CUSTOM_LOCATION_VALUE}>Tambahkan Lokasi</option>
+                </select>
+                {isCustomLocationMode && (
+                  <input
+                    type="text"
+                    {...register('location')}
+                    placeholder="Nama lokasi baru"
+                    className="mt-2 w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#004d26]/10"
+                  />
+                )}
                 {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location.message}</p>}
               </div>
             </div>
@@ -261,9 +335,9 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
               <p className="text-[10px] text-slate-400 mt-1">Mendukung Format: JPG, PNG (Maks. 5MB)</p>
             </div>
 
-            {imagePreview && (
+            {displayedImagePreview && (
               <div className="mt-2 text-center">
-                <img src={imagePreview} alt="Preview" className="mx-auto max-h-40 object-cover rounded-lg shadow-xs border border-slate-100" />
+                <img src={displayedImagePreview} alt="Preview" className="mx-auto max-h-40 object-cover rounded-lg shadow-xs border border-slate-100" />
               </div>
             )}
           </div>
@@ -279,8 +353,11 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
               <div className="w-full h-56 rounded-xl overflow-hidden border border-slate-100 shadow-inner relative mb-4 z-10">
                 <MapContainer center={mapCenter} zoom={14} className="h-full w-full">
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                  <MapClickHandler />
-                  {currentLat && currentLng && <Marker position={[currentLat, currentLng]} />}
+                  <MapFlyTo target={flyTarget} />
+                  <MapClickHandler onSelect={handleMapSelect} />
+                  {Number.isFinite(numericLat) && Number.isFinite(numericLng) && (
+                    <Marker position={[numericLat, numericLng]} />
+                  )}
                 </MapContainer>
               </div>
 

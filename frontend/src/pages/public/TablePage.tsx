@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getPlants } from '@/api/plantApi'
+import { getLocations, getPlants } from '@/api/plantApi'
 import type { PlantCategory } from '@/types'
-import { PLANT_CATEGORIES, CAMPUS_LOCATIONS } from '@/utils/categoryConfig'
+import { PLANT_CATEGORIES, buildLocationOptions } from '@/utils/categoryConfig'
 import CategoryBadge from '@/components/ui/CategoryBadge'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -41,6 +41,12 @@ export default function TablePage() {
     queryFn: () => getPlants({ search: debouncedSearch, category, location, skip, limit }),
   })
 
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: getLocations,
+  })
+
+  const locationOptions = buildLocationOptions(locations)
   const plants = Array.isArray(data) ? data : (data?.data ?? [])
 
   const total = Array.isArray(data) ? (data?.length ?? 0) : (data?.total ?? 0)
@@ -107,8 +113,8 @@ export default function TablePage() {
               className="px-4 py-3 rounded-lg border border-outline-variant bg-white text-sm font-semibold min-w-[160px] focus:ring-2 focus:ring-primary outline-none cursor-pointer"
             >
               <option value="">Semua Lokasi</option>
-              {CAMPUS_LOCATIONS.map(loc => (
-                <option key={loc} value={loc}>{loc}</option>
+              {locationOptions.map((loc) => (
+                <option key={loc.name} value={loc.name}>{loc.name}</option>
               ))}
             </select>
 

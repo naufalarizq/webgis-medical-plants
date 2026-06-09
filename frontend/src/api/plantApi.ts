@@ -1,7 +1,7 @@
 import api from './axios'
 import type {
   Plant, PaginatedPlants, PlantListParams,
-  PlantFeatureCollection, GeoJSONParams, StatsSummary,
+  PlantFeatureCollection, GeoJSONParams, StatsSummary, LocationOption,
 } from '@/types'
 
 const clean = <T extends object>(params: T) =>
@@ -18,6 +18,11 @@ export const getPlants = async (params: PlantListParams): Promise<PaginatedPlant
 
 export const getPlantsGeoJSON = async (params: GeoJSONParams): Promise<PlantFeatureCollection> => {
   const { data } = await api.get<PlantFeatureCollection>('/api/plants/geojson', { params: clean(params) })
+  return data
+}
+
+export const getLocations = async (): Promise<LocationOption[]> => {
+  const { data } = await api.get<LocationOption[]>('/api/locations')
   return data
 }
 

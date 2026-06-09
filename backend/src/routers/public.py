@@ -7,9 +7,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.models import Plant, PlantCategory
-from src.schemas import PaginatedPlants, PlantResponse
+from src.schemas import LocationResponse, PaginatedPlants, PlantResponse
 
 router = APIRouter(prefix="/api", tags=["public"])
+
+DEFAULT_LOCATIONS = [
+    {"name": "CCR", "latitude": -6.556095, "longitude": 106.731130},
+    {"name": "FAPERTA", "latitude": -6.558691, "longitude": 106.730719},
+    {"name": "FAHUTAN", "latitude": -6.557048, "longitude": 106.730657},
+    {"name": "FMIPA", "latitude": -6.557551, "longitude": 106.731283},
+    {"name": "AHN", "latitude": -6.560458, "longitude": 106.725682},
+]
+DEFAULT_LOCATION_NAMES = [location["name"] for location in DEFAULT_LOCATIONS]
 
 
 @router.get("/plants", response_model=PaginatedPlants)
@@ -89,6 +98,57 @@ async def get_plants_geojson(
         )
 
     return {"type": "FeatureCollection", "features": features}
+
+
+@router.get("/locations", response_model=list[LocationResponse])
+async def list_locations(db: Annotated[AsyncSession, Depends(get_db)]):
+    custom_locations_stmt = (
+        select(
+            func.trim(Plant.location).label("name"),
+            func.min(Plant.id).label("plant_id"),
+        )
+        .where(
+            Plant.location.is_not(None),
+            func.trim(Plant.location) != "",
+            ~func.trim(Plant.location).in_(DEFAULT_LOCATION_NAMES),
+        )
+        .group_by(func.trim(Plant.location))
+        .order_by(func.trim(Plant.location))
+        .subquery()
+    )
+
+    stmt = (
+        select(
+            custom_locations_stmt.c.name,
+            func.ST_Y(Plant.geom).label("latitude"),
+            func.ST_X(Plant.geom).label("longitude"),
+        )
+        .join(Plant, Plant.id == custom_locations_stmt.c.plant_id)
+        .order_by(custom_locations_stmt.c.name)
+    )
+    result = await db.execute(stmt)
+    custom_locations = [
+        {
+            "name": name,
+            "latitude": latitude,
+            "longitude": longitude,
+            "is_default": False,
+        }
+        for name, latitude, longitude in result.all()
+    ]
+
+    return [
+        *(
+            {
+                "name": location["name"],
+                "latitude": location["latitude"],
+                "longitude": location["longitude"],
+                "is_default": True,
+            }
+            for location in DEFAULT_LOCATIONS
+        ),
+        *custom_locations,
+    ]
 
 
 @router.get("/plants/{plant_id}", response_model=PlantResponse)

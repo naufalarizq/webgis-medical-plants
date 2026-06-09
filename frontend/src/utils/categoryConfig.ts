@@ -1,4 +1,4 @@
-import type { PlantCategory } from '@/types'
+import type { LocationOption, PlantCategory } from '@/types'
 
 export interface CategoryConfig {
   label: string
@@ -38,6 +38,32 @@ export const PLANT_CATEGORIES: PlantCategory[] = [
   'ornamental', 'food', 'herbal', 'aromatic', 'shade',
 ]
 
-export const CAMPUS_LOCATIONS: string[] = [
-  'CCR', 'FAPERTA', 'FAHUTAN', 'FMIPA', 'AHN',
+export const DEFAULT_LOCATION_OPTIONS: LocationOption[] = [
+  { name: 'CCR', latitude: -6.556095, longitude: 106.731130, is_default: true },
+  { name: 'FAPERTA', latitude: -6.558691, longitude: 106.730719, is_default: true },
+  { name: 'FAHUTAN', latitude: -6.557048, longitude: 106.730657, is_default: true },
+  { name: 'FMIPA', latitude: -6.557551, longitude: 106.731283, is_default: true },
+  { name: 'AHN', latitude: -6.560458, longitude: 106.725682, is_default: true },
 ]
+
+export const CAMPUS_LOCATION_OPTIONS = DEFAULT_LOCATION_OPTIONS
+
+export const CAMPUS_LOCATIONS: string[] = DEFAULT_LOCATION_OPTIONS.map(
+  (location) => location.name
+)
+
+export const buildLocationOptions = (locations: LocationOption[] = []): LocationOption[] => {
+  const defaultsByName = new Map(DEFAULT_LOCATION_OPTIONS.map((location) => [location.name, location]))
+  const customLocations = new Map<string, LocationOption>()
+
+  locations.forEach((location) => {
+    const name = location.name.trim()
+    if (!name || defaultsByName.has(name)) return
+    customLocations.set(name, { ...location, name, is_default: false })
+  })
+
+  return [
+    ...DEFAULT_LOCATION_OPTIONS,
+    ...Array.from(customLocations.values()).sort((a, b) => a.name.localeCompare(b.name)),
+  ]
+}

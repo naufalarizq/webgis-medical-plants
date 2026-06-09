@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { MapContainer, TileLayer, CircleMarker, Popup, ZoomControl } from 'react-leaflet'
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
+import { DivIcon } from 'leaflet'
 import type { LatLngExpression } from 'leaflet'
-import { getPlantsGeoJSON } from '@/api/plantApi'
-import { CATEGORY_CONFIG, PLANT_CATEGORIES, CAMPUS_LOCATIONS } from '@/utils/categoryConfig'
-import type { PlantCategory } from '@/types'
+import { getLocations, getPlantsGeoJSON } from '@/api/plantApi'
+import { CATEGORY_CONFIG, PLANT_CATEGORIES, buildLocationOptions } from '@/utils/categoryConfig'
+import type { PlantCategory, PlantFeature } from '@/types'
 import CategoryBadge from '@/components/ui/CategoryBadge'
 
 type MapLayer = 'osm' | 'satellite' | 'terrain'
@@ -26,23 +27,226 @@ const TILE_LAYERS: Record<MapLayer, { url: string; attribution: string; subdomai
   },
 }
 
+const MARKER_OVERLAP_THRESHOLD_PX = 1.5
+
+type PlantMarkerFeature = PlantFeature
+
+const getFeatureCenter = (feature: PlantMarkerFeature): [number, number] => {
+  const [lng, lat] = feature.geometry.coordinates
+  return [lat, lng]
+}
+
+const buildMarkerClusters = (features: PlantMarkerFeature[], map: ReturnType<typeof useMap>) => {
+  if (features.length === 0) return []
+
+  const points = features
+    .map((feature) => {
+      const [lat, lng] = getFeatureCenter(feature)
+      return {
+        feature,
+        lat,
+        lng,
+        point: map.latLngToLayerPoint([lat, lng]),
+      }
+    })
+    .sort((left, right) => left.feature.properties.id - right.feature.properties.id)
+
+  const groupedPoints: Array<{ anchor: (typeof points)[number], items: typeof points }> = []
+
+  points.forEach((point) => {
+    const matchingGroup = groupedPoints.find(
+      (group) => group.anchor.point.distanceTo(point.point) <= MARKER_OVERLAP_THRESHOLD_PX
+    )
+
+    if (matchingGroup) {
+      matchingGroup.items.push(point)
+      return
+    }
+
+    groupedPoints.push({ anchor: point, items: [point] })
+  })
+
+  return groupedPoints
+    .map((items) => {
+      const sortedItems = [...items.items].sort(
+        (left, right) => left.feature.properties.id - right.feature.properties.id
+      )
+      const centerLat = sortedItems.reduce((sum, item) => sum + item.lat, 0) / sortedItems.length
+      const centerLng = sortedItems.reduce((sum, item) => sum + item.lng, 0) / sortedItems.length
+
+      return {
+        id: sortedItems.map((item) => item.feature.properties.id).join('-'),
+        items: sortedItems.map((item) => item.feature),
+        center: [centerLat, centerLng] as [number, number],
+      }
+    })
+    .sort((left, right) => left.items[0].properties.id - right.items[0].properties.id)
+}
+
+const ClusterIcon = ({ count }: { count: number }) =>
+  new DivIcon({
+    className: 'combined-plant-marker',
+    html: `<div class="combined-plant-marker__bubble">${count}</div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10],
+  })
+
+const PlantPopupCard = ({ feature }: { feature: PlantMarkerFeature }) => {
+  const props = feature.properties
+
+  return (
+    <div className="flex flex-col overflow-hidden m-0 p-0">
+      <div className="h-28 sm:h-32 w-full bg-surface-container-high relative rounded-t-xl overflow-hidden">
+        {props.image_url ? (
+          <img src={props.image_url} alt={props.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-outline bg-surface-variant">
+            <span className="material-symbols-outlined text-4xl">local_florist</span>
+          </div>
+        )}
+        <div className="absolute top-2 right-2">
+          <CategoryBadge category={props.category} />
+        </div>
+      </div>
+
+      <div className="p-3 sm:p-4 bg-surface rounded-b-xl">
+        <h3 className="font-h3 text-base sm:text-lg font-bold leading-tight text-on-surface mb-0 line-clamp-1">{props.name}</h3>
+        <p className="font-caption text-xs sm:text-sm italic text-on-surface-variant m-0 mb-2 sm:mb-3 line-clamp-1">{props.scientific_name}</p>
+
+        <div className="flex justify-between items-center mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-outline-variant/30">
+          <span className="text-[10px] sm:text-xs font-semibold text-outline flex items-center gap-1 truncate max-w-[60%]">
+            <span className="material-symbols-outlined text-[12px] sm:text-[14px] shrink-0">location_on</span>
+            <span className="truncate">{props.location}</span>
+          </span>
+
+          <Link
+            to={`/plants/${props.id}`}
+            className="text-primary text-[10px] sm:text-xs font-bold hover:underline flex items-center gap-1 shrink-0"
+          >
+            Detail <span className="material-symbols-outlined text-[12px] sm:text-[14px]">arrow_forward</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ClusterPopup = ({ items }: { items: PlantMarkerFeature[] }) => {
+  return (
+    <div className="flex flex-col gap-3 p-1 w-[280px] sm:w-[320px]">
+      <div className="flex items-center justify-between gap-2 pb-2 border-b border-outline-variant/30">
+        <div>
+          <p className="text-xs font-semibold text-on-surface-variant">Titik gabungan</p>
+          <p className="text-sm font-bold text-on-surface">{items.length} tanaman</p>
+        </div>
+        <div className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
+          Overlap
+        </div>
+      </div>
+
+      <div className="max-h-[320px] overflow-y-auto pr-1 space-y-2">
+        {items.map((feature) => {
+          const props = feature.properties
+          return (
+            <div key={props.id} className="rounded-lg border border-outline-variant/30 bg-surface-container-low p-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-on-surface truncate">{props.name}</h4>
+                  <p className="text-[11px] italic text-on-surface-variant truncate">{props.scientific_name || '-'}</p>
+                </div>
+                <CategoryBadge category={props.category} />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-on-surface-variant">
+                <span className="truncate">{props.location}</span>
+                <Link to={`/plants/${props.id}`} className="text-primary font-semibold hover:underline shrink-0">
+                  Detail
+                </Link>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const PlantMarkers = ({ features }: { features: PlantMarkerFeature[] }) => {
+  const map = useMap()
+  const [, setViewVersion] = useState(0)
+
+  useMapEvents({
+    zoomend: () => setViewVersion((value) => value + 1),
+    moveend: () => setViewVersion((value) => value + 1),
+  })
+
+  const clusters = useMemo(
+    () => buildMarkerClusters(features, map),
+    [features, map]
+  )
+
+  return (
+    <>
+      {clusters.map((cluster) => {
+        if (cluster.items.length === 1) {
+          const feature = cluster.items[0]
+          const [lat, lng] = getFeatureCenter(feature)
+          const config = CATEGORY_CONFIG[feature.properties.category]
+
+          return (
+            <CircleMarker
+              key={feature.properties.id}
+              center={[lat, lng] as LatLngExpression}
+              pathOptions={{
+                fillColor: config?.markerColor || '#000',
+                color: '#ffffff',
+                weight: 2,
+                fillOpacity: 0.9
+              }}
+              radius={8}
+            >
+              <Popup className="custom-leaflet-popup" minWidth={240} maxWidth={280}>
+                <PlantPopupCard feature={feature} />
+              </Popup>
+            </CircleMarker>
+          )
+        }
+
+        return (
+          <Marker
+            key={cluster.id}
+            position={cluster.center as LatLngExpression}
+            icon={ClusterIcon({ count: cluster.items.length })}
+          >
+            <Popup className="custom-leaflet-popup combined-popup" minWidth={300} maxWidth={360}>
+              <ClusterPopup items={cluster.items} />
+            </Popup>
+          </Marker>
+        )
+      })}
+    </>
+  )
+}
+
 export default function MapPage() {
   const [category, setCategory] = useState<PlantCategory | ''>('')
   const [location, setLocation] = useState<string>('')
   const [activeLayer, setActiveLayer] = useState<MapLayer>('osm')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 768)
 
   const { data: geoJsonData, isFetching } = useQuery({
     queryKey: ['plants-geojson', { category, location }],
     queryFn: () => getPlantsGeoJSON({ category, location }),
   })
 
-  const mapCenter: LatLngExpression = [-6.5603, 106.7261]
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: getLocations,
+  })
 
-  // Cukup inisialisasi sekali saat pertama kali halaman dimuat (tidak perlu listener resize agresif)
-  useEffect(() => {
-    setIsSidebarOpen(window.innerWidth >= 768)
-  }, [])
+  const locationOptions = buildLocationOptions(locations)
+  const mapCenter: LatLngExpression = [-6.5603, 106.7261]
 
   return (
     <div className="flex h-[calc(100vh-80px)] w-full relative overflow-hidden bg-surface-container">
@@ -121,8 +325,8 @@ export default function MapPage() {
                 className="w-full bg-surface border border-outline-variant/50 rounded-lg text-sm p-2 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none cursor-pointer appearance-none"
               >
                 <option value="">Semua Lokasi</option>
-                {CAMPUS_LOCATIONS.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
+                {locationOptions.map((loc) => (
+                  <option key={loc.name} value={loc.name}>{loc.name}</option>
                 ))}
               </select>
             </div>
@@ -186,61 +390,7 @@ export default function MapPage() {
           
           <ZoomControl position="topright" />
 
-          {geoJsonData?.features.map((feature) => {
-            const [lng, lat] = feature.geometry.coordinates 
-            const props = feature.properties
-            const config = CATEGORY_CONFIG[props.category]
-            
-            return (
-              <CircleMarker
-                key={props.id}
-                center={[lat, lng] as LatLngExpression}
-                pathOptions={{ 
-                  fillColor: config?.markerColor || '#000', 
-                  color: '#ffffff', 
-                  weight: 2, 
-                  fillOpacity: 0.9 
-                }}
-                radius={8}
-              >
-                <Popup className="custom-leaflet-popup" minWidth={240} maxWidth={280}>
-                  <div className="flex flex-col overflow-hidden m-0 p-0">
-                    <div className="h-28 sm:h-32 w-full bg-surface-container-high relative rounded-t-xl overflow-hidden">
-                      {props.image_url ? (
-                        <img src={props.image_url} alt={props.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-outline bg-surface-variant">
-                          <span className="material-symbols-outlined text-4xl">local_florist</span>
-                        </div>
-                      )}
-                      <div className="absolute top-2 right-2">
-                         <CategoryBadge category={props.category} />
-                      </div>
-                    </div>
-                    
-                    <div className="p-3 sm:p-4 bg-surface rounded-b-xl">
-                      <h3 className="font-h3 text-base sm:text-lg font-bold leading-tight text-on-surface mb-0 line-clamp-1">{props.name}</h3>
-                      <p className="font-caption text-xs sm:text-sm italic text-on-surface-variant m-0 mb-2 sm:mb-3 line-clamp-1">{props.scientific_name}</p>
-                      
-                      <div className="flex justify-between items-center mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-outline-variant/30">
-                        <span className="text-[10px] sm:text-xs font-semibold text-outline flex items-center gap-1 truncate max-w-[60%]">
-                          <span className="material-symbols-outlined text-[12px] sm:text-[14px] shrink-0">location_on</span>
-                          <span className="truncate">{props.location}</span>
-                        </span>
-                        
-                        <Link 
-                          to={`/plants/${props.id}`}
-                          className="text-primary text-[10px] sm:text-xs font-bold hover:underline flex items-center gap-1 shrink-0"
-                        >
-                          Detail <span className="material-symbols-outlined text-[12px] sm:text-[14px]">arrow_forward</span>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            )
-          })}
+          <PlantMarkers features={geoJsonData?.features ?? []} />
         </MapContainer>
       </div>
 
@@ -272,6 +422,28 @@ export default function MapPage() {
         }
         .leaflet-control-zoom a:hover {
           background-color: #ecefe6 !important;
+        }
+        .combined-plant-marker {
+          background: transparent;
+          border: none;
+        }
+        .combined-plant-marker__bubble {
+          width: 18px;
+          height: 18px;
+          border-radius: 9999px;
+          background: #004d26;
+          color: #ffffff;
+          font-size: 9px;
+          font-weight: 700;
+          line-height: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #ffffff;
+          box-shadow: 0 4px 10px rgba(0, 77, 38, 0.22);
+        }
+        .combined-popup .leaflet-popup-content {
+          margin: 0;
         }
       `}</style>
     </div>

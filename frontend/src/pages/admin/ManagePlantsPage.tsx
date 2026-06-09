@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getPlants, deletePlant, bulkDeletePlants } from '@/api/plantApi'
+import { getPlants, deletePlant, bulkDeletePlants, getLocations } from '@/api/plantApi'
 import CategoryBadge from '@/components/ui/CategoryBadge'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { ChevronLeftIcon, ChevronRightIcon, MapPinIcon, PlusIcon, SproutIcon } from '@/components/ui/AdminIcons'
-import { CAMPUS_LOCATIONS, PLANT_CATEGORIES, CATEGORY_CONFIG } from '@/utils/categoryConfig'
+import { PLANT_CATEGORIES, CATEGORY_CONFIG, buildLocationOptions } from '@/utils/categoryConfig'
 import { Link, useNavigate } from 'react-router-dom'
 import type { PlantCategory } from '@/types'
 import toast from 'react-hot-toast'
@@ -27,6 +27,13 @@ export const ManagePlantsPage: React.FC = () => {
     queryKey: ['plants-list', { search, category, location, skip, limit }],
     queryFn: () => getPlants({ search, category, location, skip, limit }),
   })
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: getLocations,
+  })
+
+  const locationOptions = buildLocationOptions(locations)
 
   const deleteMutation = useMutation({
     mutationFn: deletePlant,
@@ -112,8 +119,8 @@ export const ManagePlantsPage: React.FC = () => {
           className="w-full px-3 sm:px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#004d26]/20 focus:border-[#004d26] transition-all cursor-pointer"
         >
           <option value="">Seluruh Wilayah Kampus</option>
-          {CAMPUS_LOCATIONS.map((loc) => (
-            <option key={loc} value={loc}>{loc}</option>
+          {locationOptions.map((loc) => (
+            <option key={loc.name} value={loc.name}>{loc.name}</option>
           ))}
         </select>
       </div>

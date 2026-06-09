@@ -49,6 +49,13 @@ class PaginatedPlants(BaseModel):
     limit: int
 
 
+class LocationResponse(BaseModel):
+    name: str
+    latitude: float
+    longitude: float
+    is_default: bool
+
+
 class AdminUserBase(BaseModel):
     username: str
     email: str
