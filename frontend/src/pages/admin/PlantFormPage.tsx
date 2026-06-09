@@ -41,7 +41,8 @@ const plantFormSchema = z.object({
   photo: z.any().optional()
 })
 
-type PlantFormInputs = z.infer<typeof plantFormSchema>
+type PlantFormFieldValues = z.input<typeof plantFormSchema>
+type PlantFormInputs = z.output<typeof plantFormSchema>
 
 interface Props {
   mode: 'add' | 'edit'
@@ -53,14 +54,14 @@ export const PlantFormPage: React.FC<Props> = ({ mode }) => {
   const plantId = id ? Number(id) : null
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PlantFormInputs>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<PlantFormFieldValues, unknown, PlantFormInputs>({
     resolver: zodResolver(plantFormSchema),
     defaultValues: { scale: 3, quantity: 1, lat: -6.5592, lng: 106.7061 }
   })
 
-  const currentLat = watch('lat')
-  const currentLng = watch('lng')
-  const photoFile = watch('photo')
+  const currentLat = watch('lat') as PlantFormInputs['lat']
+  const currentLng = watch('lng') as PlantFormInputs['lng']
+  const photoFile = watch('photo') as FileList | undefined
 
   const { data: existingPlant, isLoading: isFetchingPlant } = useQuery({
     queryKey: ['plant-detail', plantId],

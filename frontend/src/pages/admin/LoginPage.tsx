@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpenIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '@/components/ui/AdminIcons'
 import toast from 'react-hot-toast'
 import axios from 'axios'
+import type { AuthToken } from '@/types'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Email akademik/username wajib diisi'),
@@ -37,7 +38,7 @@ export const LoginPage: React.FC = () => {
       params.append('username', data.username)
       params.append('password', data.password)
 
-      const response = await axios.post('/api/auth/login', params, {
+      const response = await axios.post<AuthToken>('/api/auth/login', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
