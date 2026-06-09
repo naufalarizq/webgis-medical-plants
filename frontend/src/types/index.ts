@@ -83,9 +83,6 @@ export interface AdminUser {
   created_at: string
 }
 
-export type AuthUser = Pick<AdminUser, 'username'> &
-  Partial<Omit<AdminUser, 'username'>>
-
 export interface PlantFormValues {
   name: string
   scientific_name: string
@@ -100,8 +97,8 @@ export interface PlantFormValues {
 
 export interface AuthState {
   token: string | null
-  user: AuthUser | null
+  user: AdminUser | null
   isAuthenticated: boolean
-  setAuth: (token: string, user: AuthUser) => void
+  setAuth: (token: string, user: AdminUser) => void
   logout: () => void
 }
