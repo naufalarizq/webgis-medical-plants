@@ -12,8 +12,10 @@ export const login = async (username: string, password: string): Promise<AuthTok
   return data
 }
 
-export const getMe = async (): Promise<AdminUser> => {
-  const { data } = await api.get<AdminUser>('/api/auth/me')
+export const getMe = async (token?: string): Promise<AdminUser> => {
+  const { data } = await api.get<AdminUser>('/api/auth/me', {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
   return data
 }
 

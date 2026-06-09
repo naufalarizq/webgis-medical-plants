@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { AuthState, AdminUser } from '@/types'
+import type { AdminUser, AuthState } from '@/types'
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -10,8 +10,11 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       setAuth: (token: string, user: AdminUser) =>
         set({ token, user, isAuthenticated: true }),
-      logout: () =>
-        set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => {
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
+        set({ token: null, user: null, isAuthenticated: false })
+      },
     }),
     {
       name: 'webgis-auth',

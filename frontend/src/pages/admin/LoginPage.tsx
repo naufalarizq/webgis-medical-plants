@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '@/store/authStore'
+import { getMe, login } from '@/api/authApi'
 import { useNavigate } from 'react-router-dom'
 import { BookOpenIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon } from '@/components/ui/AdminIcons'
 import toast from 'react-hot-toast'
-import axios from 'axios'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Email akademik/username wajib diisi'),
@@ -19,6 +19,7 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const setAuth = useAuthStore((state) => state.setAuth)
+  const logout = useAuthStore((state) => state.logout)
   const navigate = useNavigate()
 
   const {
@@ -31,29 +32,17 @@ export const LoginPage: React.FC = () => {
 
   const onSubmit = async (data: LoginFormInputs) => {
     setIsLoading(true)
+    logout()
 
     try {
-      const params = new URLSearchParams()
-      params.append('username', data.username)
-      params.append('password', data.password)
+      const authToken = await login(data.username, data.password)
+      const adminUser = await getMe(authToken.access_token)
 
-      const response = await axios.post('/api/auth/login', params, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      })
-
-      if (response.data && response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token)
-
-        if (setAuth) {
-          setAuth(response.data.access_token, { username: data.username })
-        }
-
-        toast.success('Selamat datang kembali, Admin!')
-        navigate('/admin/dashboard')
-      }
+      setAuth(authToken.access_token, adminUser)
+      toast.success('Selamat datang kembali, Admin!')
+      navigate('/admin/dashboard')
     } catch (err: any) {
+      logout()
       console.error(err)
       const errorMessage =
         err.response?.data?.detail ||
