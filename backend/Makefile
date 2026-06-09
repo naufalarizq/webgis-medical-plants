@@ -1,7 +1,7 @@
 host := 127.0.0.1
 port := 8000
 
-.PHONY: all run migrate-new migrate-up lint format check
+.PHONY: all run migrate-new migrate-up local-db-up local-db-down lint format check
 
 all:
 	@echo "no target specified"
@@ -12,6 +12,12 @@ run:
 
 migrate-new:
 	alembic revision --autogenerate -m "$(MSG)"
+
+local-db-up:
+	docker compose -f docker-compose.dev.yml up -d
+
+local-db-down:
+	docker compose -f docker-compose.dev.yml down
 
 migrate-up:
 	alembic upgrade head
