@@ -89,13 +89,13 @@ export default function HomePage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6">
             <Link to="/map?category=ornamental" className="md:col-span-8 group relative overflow-hidden rounded-2xl shadow-sm border border-outline-variant/30 h-[300px] sm:h-[400px] lg:h-[480px] block w-full">
               <img 
-                alt="Tanaman Ornamental" 
+                alt="A group of vegetables in a basket" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                src="https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?q=80&w=1000&auto=format&fit=crop" 
+                src="https://images.unsplash.com/photo-1697373758830-7d0375b983ee?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8 lg:p-10">
                 <span className="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-full text-xs font-bold w-fit mb-3 tracking-wide">Terpopuler</span>
-                <h3 className="text-2xl sm:text-3xl font-h3 text-white font-bold tracking-tight mb-2">Tanaman Hias</h3>
+                <h3 className="text-2xl sm:text-3xl font-h3 text-white font-bold tracking-tight mb-2">Tanaman Ornamental</h3>
                 <p className="text-white/80 max-w-lg text-sm sm:text-base line-clamp-2 md:line-clamp-none">Katalog lengkap tanaman hias dari berbagai wilayah biogeografi di Indonesia.</p>
               </div>
             </Link>
@@ -107,16 +107,16 @@ export default function HomePage() {
                 src="https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?q=80&w=800&auto=format&fit=crop" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8 text-white">
-                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Pangan</h3>
+                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Food</h3>
                 <p className="text-white/80 text-sm sm:text-base line-clamp-3">Dokumentasi varietas lokal dan tanaman pangan berkelanjutan.</p>
               </div>
             </Link>
 
             <Link to="/map?category=herbal" className="md:col-span-4 group relative overflow-hidden rounded-2xl shadow-sm border border-outline-variant/30 h-[300px] sm:h-[350px] lg:h-[400px] block w-full">
               <img 
-                alt="Tanaman Herbal" 
+                alt="A person holding a bunch of plants in their hands" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                src="https://images.unsplash.com/photo-1596755389378-c31d21fd1273?q=80&w=1000&auto=format&fit=crop" 
+                src="https://plus.unsplash.com/premium_photo-1678382341904-44e5e271282b?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8 text-white">
                 <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Herbal</h3>
@@ -126,12 +126,12 @@ export default function HomePage() {
 
             <Link to="/map?category=aromatic" className="md:col-span-4 group relative overflow-hidden rounded-2xl shadow-sm border border-outline-variant/30 h-[300px] sm:h-[350px] lg:h-[400px] block w-full">
               <img 
-                alt="Tanaman Aromatik" 
+                alt="Clear tea cup on brown surface" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                src="https://unsplash.com/photos/green-leaf-plant-in-close-up-photography-UlOoi-zJyuI?w=800&auto=format&fit=crop" 
+                src="https://images.unsplash.com/photo-1656501020056-1c631268e3d0?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8 text-white">
-                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Aromatik</h3>
+                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Aromatic</h3>
                 <p className="text-white/80 text-sm sm:text-base line-clamp-3">Spesies flora penghasil minyak atsiri dan pewangi alami.</p>
               </div>
             </Link>
@@ -143,7 +143,7 @@ export default function HomePage() {
                 src="https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=1000&auto=format&fit=crop" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-6 sm:p-8 text-white">
-                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Pelindung</h3>
+                <h3 className="text-2xl sm:text-3xl font-h3 font-bold tracking-tight mb-2">Tanaman Shade</h3>
                 <p className="text-white/80 text-sm sm:text-base line-clamp-3">Pohon peneduh penjaga iklim mikro dan ekosistem kampus.</p>
               </div>
             </Link>
